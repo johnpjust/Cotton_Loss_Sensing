@@ -39,31 +39,37 @@ cv2.imshow('mask', mask_green)
 cv2.imshow('res', res_green)
 
 
+## HSV white stuff
+lower_blue = np.array([0, 0, int(1.5*np.median(np.reshape(hsv,(-1,3)), 0)[2])])
+upper_blue = np.array([20, 255, 255])
+mask_blue1 = cv2.inRange(hsv, lower_blue, upper_blue)
 
+lower_blue = np.array([150, 0, int(1.5*np.median(np.reshape(hsv,(-1,3)), 0)[2])])
+upper_blue = np.array([180, 255, 255])
+mask_blue2 = cv2.inRange(hsv, lower_blue, upper_blue)
+mask_blue = mask_blue1 | mask_blue2
+res_blue = cv2.bitwise_and(imgr, imgr, mask=abs(mask_blue-1))
 
-# ## HSV white stuff
-# hsv = cv2.cvtColor(imgr, cv2.COLOR_RGB2HSV)
-# lower_green = np.array([30, 25, 0])
-# upper_green = np.array([85, 255, 200])
-
-
-################ kmeans for image #############
-Z = img.reshape((-1,3))
-
-# convert to np.float32
-Z = np.float32(Z)
-
-# define criteria, number of clusters(K) and apply kmeans()
-criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-K = 8
-ret,label,center=cv2.kmeans(Z,K,None,criteria,10,cv2.KMEANS_RANDOM_CENTERS)
-
-# Now convert back into uint8, and make original image
-center = np.uint8(center)
-res = center[label.flatten()]
-res2 = res.reshape((imgr.shape))
-
-cv2.imshow('res2',res2)
+cv2.imshow('frame', imgr)
+cv2.imshow('mask', mask_blue)
+cv2.imshow('res', res_blue)
+# ################ kmeans for image #############
+# Z = img.reshape((-1,3))
+#
+# # convert to np.float32
+# Z = np.float32(Z)
+#
+# # define criteria, number of clusters(K) and apply kmeans()
+# criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+# K = 8
+# ret,label,center=cv2.kmeans(Z,K,None,criteria,10,cv2.KMEANS_RANDOM_CENTERS)
+#
+# # Now convert back into uint8, and make original image
+# center = np.uint8(center)
+# res = center[label.flatten()]
+# res2 = res.reshape((imgr.shape))
+#
+# cv2.imshow('res2',res2)
 
 # Line finding using the Probabilistic Hough Transform
 theta = 7*np.pi / 8 + np.arange(45) / 180 * np.pi
