@@ -1,3 +1,4 @@
+import pandas as pd
 import numpy as np
 import cv2
 from skimage.transform import (hough_line, hough_line_peaks,
@@ -5,6 +6,8 @@ from skimage.transform import (hough_line, hough_line_peaks,
 from sklearn.cluster import DBSCAN
 import matplotlib.pyplot as plt
 from matplotlib import cm
+
+from sklearn.cluster import OPTICS, cluster_optics_dbscan
 
 def get_R_theta(x1, y1, x2, y2):
     xd = x2-x1
@@ -71,6 +74,7 @@ cv2.imshow('res', res_blue)
 #
 # cv2.imshow('res2',res2)
 
+
 # Line finding using the Probabilistic Hough Transform
 theta = 7*np.pi / 8 + np.arange(45) / 180 * np.pi
 lines = probabilistic_hough_line(mask_green, threshold=15, line_length=40,
@@ -104,3 +108,60 @@ for a in ax:
 
 plt.tight_layout()
 plt.show()
+
+
+
+X = np.transpose(np.squeeze(np.array([(mags - np.mean(mags))/np.std(mags),(thetas - np.mean(thetas))/np.std(thetas)])))
+## dbscan
+db = DBSCAN(eps=0.3).fit(X)
+
+core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
+core_samples_mask[db.core_sample_indices_] = True
+labels = db.labels_
+
+# Number of clusters in labels, ignoring noise if present.
+n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+n_noise_ = list(labels).count(-1)
+
+# Black removed and is used for noise instead.
+unique_labels = set(labels)
+colors = [plt.cm.Spectral(each)
+          for each in np.linspace(0, 1, len(unique_labels))]
+plt.figure()
+for k, col in zip(unique_labels, colors):
+    if k == -1:
+        # Black used for noise.
+        col = [0, 0, 0, 1]
+
+    class_member_mask = (labels == k)
+
+    xy = X[class_member_mask & core_samples_mask]
+    plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
+             markeredgecolor='k', markersize=14)
+
+    xy = X[class_member_mask & ~core_samples_mask]
+    plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
+             markeredgecolor='k', markersize=6)
+
+plt.title('Estimated number of clusters: %d' % n_clusters_)
+plt.show()
+
+
+# ## OPTICS cluster to find rows
+# clust = OPTICS(min_samples=5, xi=.05, min_cluster_size=.05, n_jobs=-1)
+# clust.fit(X)
+#
+#
+# fig = plt.figure()
+# ax2 = fig.add_subplot(1, 1, 1)
+# # OPTICS
+# colors = ['g.', 'r.', 'b.', 'y.', 'c.', 'm', '#eeefff']
+# for klass, color in zip(range(len(np.unique(clust.labels_)) - 1), colors):
+#     Xk = X[clust.labels_ == klass]
+#     ax2.plot(Xk[:, 0], Xk[:, 1], color, alpha=0.3)
+# ax2.plot(X[clust.labels_ == -1, 0], X[clust.labels_ == -1, 1], 'k+', alpha=0.1)
+# ax2.set_title('Automatic Clustering\nOPTICS')
+
+## get group means
+df = pd.DataFrame({'mags': mags, 'thetas': thetas, 'labels': labels})
+lineavgs = df.groupby('labels').mean()[1:]
